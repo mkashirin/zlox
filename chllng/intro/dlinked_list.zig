@@ -1,19 +1,37 @@
+// **Task:**
+// To get some practice with pointers, define a generic doubly linked list
+// ~~of heap-allocated strings~~. Write functions to insert, find, and delete
+// items from it. Test them.
+//
+// **Note:**
+// Current implementation has major flaw due to the `seek()` function. It
+// can not handle all the possible type comparisons in the search process.
+// So be sure to use elementary types like numeric or bytes, but do not try
+// to use strings!
+
 const std = @import("std");
 
 const mem = std.mem;
 const Allocator = mem.Allocator;
 const testing = std.testing;
 
+/// This generic function defines doubly linked list with elements of
+/// type `T`, which is defined at compilation time. It has methods to insert,
+/// prepend, append, remove, pop and seek items (nodes) in it.
 pub fn DoublyLinkedList(comptime T: type) type {
     return struct {
         const Self = @This();
 
         pub const Node = struct {
+            /// `Node` struct stores a value of predefined type and points to
+            /// the previous and next nodes.
             value: T,
             previous: ?*Node = null,
             next: ?*Node = null,
         };
 
+        /// `DoublyLinkedList` struct keeps track of the length of the list,
+        /// first and last elements of it.
         len: usize = 0,
         first: ?*Node = null,
         last: ?*Node = null,
@@ -21,6 +39,12 @@ pub fn DoublyLinkedList(comptime T: type) type {
         const BeforeAfter = enum { before, after };
         const FirstLast = enum { first, last };
 
+        /// This function inserts new node after an existing one, modifying
+        /// the pointers and length of the list.
+        ///
+        /// Arguments:
+        ///     existing: pointer to a node that already exists in the list;
+        ///     new: pointer to a node to be inserted after the existing one;
         pub fn insertAfter(self: *Self, existing: *Node, new: *Node) void {
             new.previous = existing;
             if (existing.next) |nnode| {
@@ -35,6 +59,12 @@ pub fn DoublyLinkedList(comptime T: type) type {
             self.len += 1;
         }
 
+        /// This function inserts new node before an existing one, modifying
+        /// the pointers and length of the list.
+        ///
+        /// Arguments:
+        ///     existing: pointer to a node that already exists in the list;
+        ///     new: pointer to a node to be inserted before the existing one;
         pub fn insertBefore(self: *Self, existing: *Node, new: *Node) void {
             new.next = existing;
             if (existing.previous) |pnode| {
@@ -49,6 +79,13 @@ pub fn DoublyLinkedList(comptime T: type) type {
             self.len += 1;
         }
 
+        /// Unifies `insertBefore()` and `insertAfter` to a single interface.
+        ///
+        /// Arguments:
+        ///     existing: pointer to a node that already exists in the list;
+        ///     new: pointer to a node to be inserted either before or after the
+        ///         existing one;
+        ///     direction: where to put the new node.
         pub fn insert(
             self: *Self,
             existing: *Node,
@@ -61,6 +98,10 @@ pub fn DoublyLinkedList(comptime T: type) type {
             }
         }
 
+        /// Inserts a node at the beginning of the list.
+        ///
+        /// Arguments:
+        ///     new: pointer to a node to be inserted at the beginning of the list.
         pub fn prepend(self: *Self, new: *Node) void {
             if (self.first) |fnode| self.insertBefore(fnode, new) else {
                 self.first = new;
@@ -72,12 +113,21 @@ pub fn DoublyLinkedList(comptime T: type) type {
             }
         }
 
+        /// Inserts a node at the end of the list.
+        ///
+        /// Arguments:
+        ///     new: pointer to a node to be inserted at the end of the list.
         pub fn append(self: *Self, new: *Node) void {
             if (self.last) |lnode| {
                 self.insertAfter(lnode, new);
             } else self.prepend(new);
         }
 
+        /// Removes a given node from the list. Modifies pointers and reduces
+        /// the list length by 1.
+        ///
+        /// Arguments:
+        ///     node: pointer to a node to be removed.
         pub fn remove(self: *Self, node: *Node) void {
             if (node.previous) |pnode| pnode.next = node.next else {
                 self.first = node.next;
@@ -90,6 +140,13 @@ pub fn DoublyLinkedList(comptime T: type) type {
             self.len -= 1;
         }
 
+        /// Calls remove on either first or last node. Returns the node
+        /// removed.
+        ///
+        /// Arguments:
+        ///     position: where from node should be popped.
+        /// Returns:
+        ///     node removed.
         pub fn pop(self: *Self, position: FirstLast) ?*Node {
             switch (position) {
                 .last => {
@@ -105,13 +162,13 @@ pub fn DoublyLinkedList(comptime T: type) type {
             }
         }
 
-        pub fn seek(self: *Self, find: T, from: FirstLast) ?*Node {
-            switch (from) {
-                .last => return self.seekBackwards(find),
-                .first => return self.seekForwards(find),
-            }
-        }
-
+        /// Seeks for a node with a given value traversing the list forwards
+        /// (from first to last).
+        ///
+        /// Arguments:
+        ///     find: value to search for.
+        /// Returns:
+        ///     pointer to the node if found, null otherwise.
         pub fn seekForwards(self: *Self, find: T) ?*Node {
             var current = self.first orelse return null;
             if (current.value == find) return current else {
@@ -122,6 +179,13 @@ pub fn DoublyLinkedList(comptime T: type) type {
             }
         }
 
+        /// Seeks for a node with a given value traversing the list forwards
+        /// (from first to last).
+        ///
+        /// Arguments:
+        ///     find: value to search for.
+        /// Returns:
+        ///     pointer to the node if found, null otherwise.
         pub fn seekBackwards(self: *Self, find: T) ?*Node {
             var current = self.last orelse return null;
             if (current.value == find) return current else {
@@ -129,6 +193,18 @@ pub fn DoublyLinkedList(comptime T: type) type {
                     if (cnode.value == find) return cnode;
                     current = current.previous.?;
                 } else return null;
+            }
+        }
+
+        /// Unifies the `seekForwards` and `seekBackwards` to a single
+        /// interface.
+        ///
+        /// Returns:
+        ///     pointer to the node if found, null otherwise.
+        pub fn seek(self: *Self, find: T, from: FirstLast) ?*Node {
+            switch (from) {
+                .last => return self.seekBackwards(find),
+                .first => return self.seekForwards(find),
             }
         }
     };
