@@ -3,4 +3,6 @@
 ZLox is the project based on the book "Crafting Interpreters" by
 Robert Nystrom.
 
-*WIP*
+## Status
+
+Work in progress.
