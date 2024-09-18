@@ -84,7 +84,7 @@ pub fn DoublyLinkedList(comptime T: type) type {
         /// Arguments:
         ///     existing: pointer to a node that already exists in the list;
         ///     new: pointer to a node to be inserted either before or after the
-        ///         existing one;
+        ///     existing one;
         ///     direction: where to put the new node.
         pub fn insert(
             self: *Self,
